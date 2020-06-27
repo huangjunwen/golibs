@@ -12,38 +12,38 @@ import (
 	. "github.com/huangjunwen/golibs/taskrunner"
 )
 
-func TestNewLimitedRunner(t *testing.T) {
+func TestNew(t *testing.T) {
 	assert := assert.New(t)
 
 	{
-		_, err := NewLimitedRunner(LimitedRunnerMinWorkers(0))
+		_, err := New(MinWorkers(0))
 		assert.Error(err)
 	}
 	{
-		_, err := NewLimitedRunner(LimitedRunnerMaxWorkers(0))
+		_, err := New(MaxWorkers(0))
 		assert.Error(err)
 	}
 	{
-		_, err := NewLimitedRunner(LimitedRunnerQueueSize(0))
+		_, err := New(QueueSize(0))
 		assert.Error(err)
 	}
 	{
-		_, err := NewLimitedRunner(LimitedRunnerMinWorkers(2), LimitedRunnerMaxWorkers(1))
+		_, err := New(MinWorkers(2), MaxWorkers(1))
 		assert.Error(err)
 	}
 	{
-		_, err := NewLimitedRunner(LimitedRunnerIdleTime(-time.Second))
+		_, err := New(IdleTime(-time.Second))
 		assert.Error(err)
 	}
 }
 
-func TestLimitedRunnerSubmit(t *testing.T) {
+func TestSubmit(t *testing.T) {
 	assert := assert.New(t)
 
-	r, err := NewLimitedRunner(
-		LimitedRunnerMinWorkers(1),
-		LimitedRunnerMaxWorkers(2),
-		LimitedRunnerQueueSize(1),
+	r, err := New(
+		MinWorkers(1),
+		MaxWorkers(2),
+		QueueSize(1),
 	)
 	assert.NoError(err)
 	defer r.Close()
@@ -75,14 +75,14 @@ func TestLimitedRunnerSubmit(t *testing.T) {
 	assert.Equal(ErrClosed, r.Submit(task)) // 5 fail since closed
 }
 
-func TestLimitedRunnerClose(t *testing.T) {
+func TestClose(t *testing.T) {
 	assert := assert.New(t)
 
 	maxWorkers := 15
 	taskCount := 30
 
-	r, err := NewLimitedRunner(
-		LimitedRunnerMaxWorkers(maxWorkers),
+	r, err := New(
+		MaxWorkers(maxWorkers),
 	)
 	assert.NoError(err)
 	defer r.Close()
@@ -111,13 +111,13 @@ func TestLimitedRunnerClose(t *testing.T) {
 
 }
 
-func TestLimitedRunnerIdleTime(t *testing.T) {
+func TestIdleTime(t *testing.T) {
 	assert := assert.New(t)
 
-	r, err := NewLimitedRunner(
-		LimitedRunnerMaxWorkers(4294967296),         // Unlimited workers.
-		LimitedRunnerIdleTime(500*time.Millisecond), // Short idle time.
-		//LimitedRunnerIdleTime(10*time.Millisecond), // Short idle time.
+	r, err := New(
+		MaxWorkers(4294967296),         // Unlimited workers.
+		IdleTime(500*time.Millisecond), // Short idle time.
+		//IdleTime(10*time.Millisecond), // Short idle time.
 	)
 	assert.NoError(err)
 	defer r.Close()
@@ -125,7 +125,7 @@ func TestLimitedRunnerIdleTime(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	stopCh := make(chan struct{})
 
-	// Print number of go routines for each interval.
+	// Print number of go routines each interval.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -168,7 +168,7 @@ func TestLimitedRunnerIdleTime(t *testing.T) {
 				assert.NoError(r.Submit(nop))
 			}
 
-			// Each second reduce taskCountPerInterval to a half.
+			// Each second reduce taskCountPerInterval to half.
 			if i%tickerInSecond == 0 {
 				taskCountPerInterval /= 2
 			}

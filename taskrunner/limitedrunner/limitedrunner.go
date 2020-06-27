@@ -10,16 +10,16 @@ import (
 
 const (
 	// Default minimum go routines to handle tasks.
-	DefaultLimitedRunnerMinWorkers = 2
+	DefaultMinWorkers = 2
 
 	// Default maximum go routines to handle tasks.
-	DefaultLimitedRunnerMaxWorkers = 4096
+	DefaultMaxWorkers = 4096
 
 	// Default queue size.
-	DefaultLimitedRunnerQueueSize = 16 * 1024
+	DefaultQueueSize = 16 * 1024
 
-	// Default idle time for worker before quit.
-	DefaultLimitedRunnerIdleTime = 30 * time.Second
+	// Default idle time for non-persistent worker before quit.
+	DefaultIdleTime = 30 * time.Second
 )
 
 var (
@@ -28,12 +28,12 @@ var (
 )
 
 // LimitedRunner implements taskrunner interface. It starts with some persistent
-// worker go routines (LimitedRunnerMinWorkers) which will not exit until Close.
-// New worker go routines (up to LimitedRunnerMaxWorkers - LimitedRunnerMinWorkers)
-// maybe created when workload increases. These workers will exit after some
-// idle time (LimitedRunnerIdleTime).
+// worker go routines (MinWorkers) which will not exit until Close.
+// New worker go routines (up to MaxWorkers - MinWorkers)
+// maybe created when workload increases which will exit after some
+// idle time (IdleTime).
 //
-// Tasks are submitted to a buffered channel and distrubuted to all workers.
+// Tasks are submitted to a buffered channel (size is QueueSize) and distrubuted to all workers.
 type LimitedRunner struct {
 	minWorkers int // at least 1
 	maxWorkers int // at least minWorkers
@@ -48,16 +48,13 @@ type LimitedRunner struct {
 	closed bool
 }
 
-// LimitedRunnerOption is the option in creating LimitedRunner.
-type LimitedRunnerOption func(*LimitedRunner) error
-
-// NewLimitedRunner creates a new LimitedRunner.
-func NewLimitedRunner(opts ...LimitedRunnerOption) (*LimitedRunner, error) {
+// New creates a new LimitedRunner.
+func New(opts ...Option) (*LimitedRunner, error) {
 	r := &LimitedRunner{
-		minWorkers: DefaultLimitedRunnerMinWorkers,
-		maxWorkers: DefaultLimitedRunnerMaxWorkers,
-		queueSize:  DefaultLimitedRunnerQueueSize,
-		idleTime:   DefaultLimitedRunnerIdleTime,
+		minWorkers: DefaultMinWorkers,
+		maxWorkers: DefaultMaxWorkers,
+		queueSize:  DefaultQueueSize,
+		idleTime:   DefaultIdleTime,
 	}
 
 	for _, opt := range opts {
@@ -67,7 +64,7 @@ func NewLimitedRunner(opts ...LimitedRunnerOption) (*LimitedRunner, error) {
 	}
 
 	if r.maxWorkers < r.minWorkers {
-		return nil, fmt.Errorf("NewLimitedRunner: MaxWorkers(%d) < MinWorkers(%d)", r.maxWorkers, r.minWorkers)
+		return nil, fmt.Errorf("New: MaxWorkers(%d) < MinWorkers(%d)", r.maxWorkers, r.minWorkers)
 	}
 
 	r.workerCh = make(chan struct{}, r.maxWorkers)
@@ -92,7 +89,7 @@ func (r *LimitedRunner) managerLoop() {
 	defer r.wg.Done()
 
 	for {
-		r.workerCh <- struct{}{}
+		r.workerCh <- struct{}{} // We need worker quota.
 		task := <-r.taskCh
 		if task == nil {
 			<-r.workerCh
@@ -103,6 +100,8 @@ func (r *LimitedRunner) managerLoop() {
 	}
 }
 
+// workerLoop handles task until taskCh closed, or idle long enough
+// for non-persistent workers.
 func (r *LimitedRunner) workerLoop(persistent bool, task func()) {
 
 	defer func() {
@@ -110,10 +109,6 @@ func (r *LimitedRunner) workerLoop(persistent bool, task func()) {
 		<-r.workerCh
 		r.wg.Done()
 	}()
-
-	if task == nil {
-		task = nop
-	}
 
 	// NOTE: idleCh is nil for persistent worker so that it will never trigger a idle timeout (and exit).
 	// stopTimer should be invoked only when idleCh has NOT yet drained.
@@ -205,52 +200,5 @@ func (r *LimitedRunner) Close() {
 	}
 	if l := len(r.workerCh); l != 0 {
 		panic(fmt.Errorf("len(workerCh) = %d in Close()", l))
-	}
-}
-
-// LimitedRunnerMinWorkers sets minimum worker go routines. n should be at least 1.
-func LimitedRunnerMinWorkers(n int) LimitedRunnerOption {
-	return func(r *LimitedRunner) error {
-		if n < 1 {
-			return fmt.Errorf("LimitedRunnerMinWorkers < 1")
-		}
-		r.minWorkers = n
-		return nil
-	}
-}
-
-// LimitedRunnerMaxWorkers sets maximum worker go routines. n should be at least MinWorkers.
-func LimitedRunnerMaxWorkers(n int) LimitedRunnerOption {
-	return func(r *LimitedRunner) error {
-		if n < 1 {
-			return fmt.Errorf("LimitedRunnerMaxWorkers < 1")
-		}
-		r.maxWorkers = n
-		return nil
-	}
-}
-
-// LimitedRunnerQueueSize sets the task buffered channel. n should be at least 1.
-// n should be set to a large enough value to handle burst.
-// Memory overhead: sizeof(function pointer) * n (e.g. 8M if n is 1 million on 64 bit machine)
-func LimitedRunnerQueueSize(n int) LimitedRunnerOption {
-	return func(r *LimitedRunner) error {
-		if n < 1 {
-			return fmt.Errorf("LimitedRunnerQueueSize < 1")
-		}
-		r.queueSize = n
-		return nil
-	}
-}
-
-// LimitedRunnerIdleTime sets the idle time after which a non-persistent worker go routine
-// should exit.
-func LimitedRunnerIdleTime(t time.Duration) LimitedRunnerOption {
-	return func(r *LimitedRunner) error {
-		if t < 0 {
-			return fmt.Errorf("LimitedRunnerIdleTime < 0")
-		}
-		r.idleTime = t
-		return nil
 	}
 }
