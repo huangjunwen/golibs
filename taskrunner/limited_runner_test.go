@@ -2,6 +2,7 @@ package taskrunner
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -75,9 +76,11 @@ func TestLimitedRunnerSubmit(t *testing.T) {
 func TestLimitedRunnerClose(t *testing.T) {
 	assert := assert.New(t)
 
+	maxWorkers := 15
+	taskCount := 30
+
 	r, err := NewLimitedRunner(
-		LimitedRunnerMinWorkers(1),
-		LimitedRunnerMaxWorkers(15),
+		LimitedRunnerMaxWorkers(maxWorkers),
 	)
 	assert.NoError(err)
 	defer r.Close()
@@ -94,15 +97,89 @@ func TestLimitedRunnerClose(t *testing.T) {
 	}
 
 	start := time.Now()
-	n := 30
-	for i := 0; i < n; i++ {
+	for i := 0; i < taskCount; i++ {
 		assert.NoError(r.Submit(task))
 	}
 	fmt.Printf("tasks submitted\n")
 	r.Close() // Close should wait all submitted tasks finished
 	dur := time.Since(start)
 
-	assert.Equal(n, count)
-	fmt.Printf("%d tasks in %s\n", n, dur.String())
+	assert.Equal(taskCount, count)
+	fmt.Printf("%d tasks in %s\n", count, dur.String())
+
+}
+
+func TestLimitedRunnerIdleTime(t *testing.T) {
+	assert := assert.New(t)
+
+	r, err := NewLimitedRunner(
+		LimitedRunnerMaxWorkers(4294967296),         // Unlimited workers.
+		LimitedRunnerIdleTime(500*time.Millisecond), // Short idle time.
+		//LimitedRunnerIdleTime(10*time.Millisecond), // Short idle time.
+	)
+	assert.NoError(err)
+	defer r.Close()
+
+	wg := &sync.WaitGroup{}
+	stopCh := make(chan struct{})
+
+	// Print number of go routines for each interval.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case t := <-ticker.C:
+				fmt.Printf("[%s] go routines: %d\n", t.String(), runtime.NumGoroutine())
+
+			case <-stopCh:
+				return
+			}
+		}
+
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(stopCh)
+
+		taskCountPerSecond := 20480
+		interval := 100 * time.Millisecond
+
+		tickerInSecond := int(time.Second / interval)
+		taskCountPerInterval := taskCountPerSecond / tickerInSecond
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		i := 0
+		for taskCountPerInterval > 0 {
+			<-ticker.C
+
+			// Submit taskCountPerInterval tasks to the runner.
+			for j := 0; j < taskCountPerInterval; j++ {
+				assert.NoError(r.Submit(nop))
+			}
+
+			// Each second reduce taskCountPerInterval to a half.
+			if i%tickerInSecond == 0 {
+				taskCountPerInterval /= 2
+			}
+			i++
+
+		}
+
+	}()
+
+	wg.Wait()
+
+	fmt.Printf("[%s] go routines before close: %d\n", time.Now().String(), runtime.NumGoroutine())
+	r.Close()
+	fmt.Printf("[%s] go routines after close: %d\n", time.Now().String(), runtime.NumGoroutine())
 
 }
