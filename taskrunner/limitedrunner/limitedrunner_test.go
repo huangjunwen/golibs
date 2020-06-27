@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	. "github.com/huangjunwen/golibs/taskrunner"
 )
 
 func TestNewLimitedRunner(t *testing.T) {
