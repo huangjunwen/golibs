@@ -1,8 +1,10 @@
 # golibs
 
-[![GoDoc](https://godoc.org/github.com/huangjunwen/golibs?status.svg)](http://godoc.org/github.com/huangjunwen/golibs)
-
 My go utilities library
+
+## doc
+
+https://pkg.go.dev/github.com/huangjunwen/golibs
 
 ## package list
 
