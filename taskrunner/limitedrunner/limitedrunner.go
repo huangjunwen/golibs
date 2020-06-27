@@ -30,7 +30,7 @@ var (
 // LimitedRunner implements taskrunner interface. It starts with some persistent
 // worker go routines (MinWorkers) which will not exit until Close.
 // New worker go routines (up to MaxWorkers - MinWorkers)
-// maybe created when workload increases which will exit after some
+// maybe created when workload increases, and will exit after some
 // idle time (IdleTime).
 //
 // Tasks are submitted to a buffered channel (size is QueueSize) and distrubuted to all workers.

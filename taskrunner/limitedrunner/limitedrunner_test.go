@@ -49,30 +49,32 @@ func TestSubmit(t *testing.T) {
 	defer r.Close()
 
 	// The task returns only when close(stopCh)
-	syncCh := make(chan struct{})
+	syncCh := make(chan int)
 	stopCh := make(chan struct{})
-	task := func() {
-		syncCh <- struct{}{}
-		<-stopCh
+	task := func(i int) func() {
+		return func() {
+			syncCh <- i
+			<-stopCh
+		}
 	}
 
-	assert.NoError(r.Submit(task)) // 1
-	<-syncCh                       // sync 1
+	assert.NoError(r.Submit(task(1))) // 1
+	assert.Equal(1, <-syncCh)         // sync 1
 
-	assert.NoError(r.Submit(task)) // 2
-	<-syncCh                       // sync 2
+	assert.NoError(r.Submit(task(2))) // 2
+	assert.Equal(2, <-syncCh)         // sync 2
 
-	assert.NoError(r.Submit(task)) // 3 enqueued but no worker can handle this
-	//<-syncCh                     // sync 3 will be dead
+	assert.NoError(r.Submit(task(3))) // 3 enqueued but no worker can handle this
+	//<-syncCh                        // sync 3 will be dead
 
-	assert.Equal(ErrTooBusy, r.Submit(task)) // 4 fail since queue full
+	assert.Equal(ErrTooBusy, r.Submit(task(4))) // 4 fail since queue full
 
-	close(stopCh) // 1 and 2 done
-	<-syncCh      // sync 3
+	close(stopCh)             // 1 and 2 done
+	assert.Equal(3, <-syncCh) // sync 3
 
 	r.Close()
 
-	assert.Equal(ErrClosed, r.Submit(task)) // 5 fail since closed
+	assert.Equal(ErrClosed, r.Submit(task(5))) // 5 fail since closed
 }
 
 func TestClose(t *testing.T) {
@@ -184,4 +186,65 @@ func TestIdleTime(t *testing.T) {
 	r.Close()
 	fmt.Printf("[%s] go routines after close: %d\n", time.Now().String(), runtime.NumGoroutine())
 
+}
+
+func TestPanic(t *testing.T) {
+	assert := assert.New(t)
+
+	r, err := New(
+		MinWorkers(1),
+		MaxWorkers(1),
+		QueueSize(1),
+	)
+	assert.NoError(err)
+	defer r.Close()
+
+	// Task can't be nil
+	assert.Panics(func() {
+		r.Submit(nil)
+	})
+
+	// The first panic task should no affect the later one.
+	syncCh := make(chan struct{})
+	assert.NoError(r.Submit(func() {
+		syncCh <- struct{}{}
+		panic(fmt.Errorf("xxxx"))
+	}))
+
+	<-syncCh
+	laterCalled := false
+	assert.NoError(r.Submit(func() {
+		fmt.Println("task after panic")
+		laterCalled = true
+	}))
+
+	r.Close()
+	assert.True(laterCalled)
+}
+
+func TestSubmitInTask(t *testing.T) {
+	assert := assert.New(t)
+
+	r, err := New(
+		MinWorkers(1),
+		MaxWorkers(1),
+		QueueSize(1),
+	)
+	assert.NoError(err)
+	defer r.Close()
+
+	laterCalled := false
+	syncCh := make(chan struct{})
+
+	assert.NoError(r.Submit(func() {
+		assert.NoError(r.Submit(func() {
+			fmt.Println("submit inside task")
+			laterCalled = true
+		}))
+		syncCh <- struct{}{}
+	}))
+
+	<-syncCh
+	r.Close()
+	assert.True(laterCalled)
 }
