@@ -137,8 +137,13 @@ func (r *LimitedRunner) workerLoop(persistent bool, task func()) {
 	}
 
 	for {
-		// XXX: maybe panic.
-		task()
+		func() {
+			defer func() {
+				// Recover silently.
+				recover()
+			}()
+			task()
+		}()
 
 		resetTimer()
 		select {
@@ -156,8 +161,8 @@ func (r *LimitedRunner) workerLoop(persistent bool, task func()) {
 
 }
 
-// Submit implements taskrunner interface. Returns ErrTooBusy if task queue is
-// full at this moment.
+// Submit implements taskrunner interface. Returns ErrTooBusy if task queue
+// (the buffered channel) is full at this moment.
 func (r *LimitedRunner) Submit(task func()) error {
 	if task == nil {
 		panic(fmt.Errorf("LimitedRunner.Submit(nil)"))
