@@ -73,11 +73,9 @@ type RowDeletion struct {
 }
 
 type rowChange struct {
-	trxCtx    *TrxContext
-	rowsEvent *replication.RowsEvent
-
-	schemaName string
-	tableName  string
+	trxCtx     *TrxContext
+	rowsEvent  *replication.RowsEvent
+	meta       *tableMeta
 	beforeData []interface{}
 	afterData  []interface{}
 }
@@ -107,17 +105,17 @@ func (e *rowChange) TrxContext() *TrxContext {
 
 // SchemaName returns the database name.
 func (e *rowChange) SchemaName() string {
-	return e.schemaName
+	return e.meta.SchemaName()
 }
 
 // TableName returns the table name.
 func (e *rowChange) TableName() string {
-	return e.tableName
+	return e.meta.TableName()
 }
 
 // ColumnNames returns column names of the table.
 func (e *rowChange) ColumnNames() []string {
-	return e.rowsEvent.Table.ColumnNameString()
+	return e.meta.ColumnNameString()
 }
 
 // BeforeData returns column data before the change or nil if not applicable.
@@ -125,33 +123,35 @@ func (e *rowChange) BeforeData() []interface{} {
 	return e.beforeData
 }
 
-// BeforeDataMap returns data map (column name -> column data)
-// before the change or nil if not applicable.
-func (e *rowChange) BeforeDataMap() map[string]interface{} {
-	if e.beforeData == nil {
-		return nil
-	}
-	ret := make(map[string]interface{})
-	for i, name := range e.ColumnNames() {
-		ret[name] = e.beforeData[i]
-	}
-	return ret
-}
-
 // AfterData returns column data after the change or nil if not applicable.
 func (e *rowChange) AfterData() []interface{} {
 	return e.afterData
 }
 
-// AfterDataMap returns data map (column name -> column data)
-// after the change or nil if not applicable.
-func (e *rowChange) AfterDataMap() map[string]interface{} {
-	if e.afterData == nil {
+// BeforeDataMap returns data map (column name -> column data)
+// before the change or nil if not applicable.
+func (e *rowChange) BeforeDataMap() map[string]interface{} {
+	beforeData := e.BeforeData()
+	if beforeData == nil {
 		return nil
 	}
 	ret := make(map[string]interface{})
 	for i, name := range e.ColumnNames() {
-		ret[name] = e.afterData[i]
+		ret[name] = beforeData[i]
+	}
+	return ret
+}
+
+// AfterDataMap returns data map (column name -> column data)
+// after the change or nil if not applicable.
+func (e *rowChange) AfterDataMap() map[string]interface{} {
+	afterData := e.AfterData()
+	if afterData == nil {
+		return nil
+	}
+	ret := make(map[string]interface{})
+	for i, name := range e.ColumnNames() {
+		ret[name] = afterData[i]
 	}
 	return ret
 }

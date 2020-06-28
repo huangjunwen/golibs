@@ -99,21 +99,14 @@ func IncrDump(
 		case *replication.RowsEvent:
 
 			table := event.Table
-			schemaName := string(table.Schema)
-			tableName := string(table.Table)
-
 			if len(table.ColumnName) != int(table.ColumnCount) {
 				panic(fmt.Errorf(
 					"TableMapEvent has no ColumnName, pls make sure you are using >= MySQL-8.0.1 and set --binlog-row-metadata=FULL",
 				))
 			}
 
-			// NOTE: We have checked ColumnName above, thus --binlog-row-metadata=FULL should be enabled.
+			// NOTE: We have checked ColumnName above, thus --binlog-row-metadata=FULL should have been enabled.
 			meta := newTableMeta(table)
-			normRowData := func(data []interface{}) []interface{} {
-				normalizeRowData(data, meta)
-				return data
-			}
 
 			switch binlogEvent.Header.EventType {
 			case replication.WRITE_ROWS_EVENTv2:
@@ -122,10 +115,9 @@ func IncrDump(
 						&rowChange{
 							trxCtx:     trxCtx,
 							rowsEvent:  event,
-							schemaName: schemaName,
-							tableName:  tableName,
+							meta:       meta,
 							beforeData: nil,
-							afterData:  normRowData(event.Rows[i]),
+							afterData:  meta.NormalizeRowData(event.Rows[i]),
 						},
 					}); err != nil {
 						return err
@@ -138,10 +130,9 @@ func IncrDump(
 						&rowChange{
 							trxCtx:     trxCtx,
 							rowsEvent:  event,
-							schemaName: schemaName,
-							tableName:  tableName,
-							beforeData: normRowData(event.Rows[i]),
-							afterData:  normRowData(event.Rows[i+1]),
+							meta:       meta,
+							beforeData: meta.NormalizeRowData(event.Rows[i]),
+							afterData:  meta.NormalizeRowData(event.Rows[i+1]),
 						},
 					}); err != nil {
 						return err
@@ -154,9 +145,8 @@ func IncrDump(
 						&rowChange{
 							trxCtx:     trxCtx,
 							rowsEvent:  event,
-							schemaName: schemaName,
-							tableName:  tableName,
-							beforeData: normRowData(event.Rows[i]),
+							meta:       meta,
+							beforeData: meta.NormalizeRowData(event.Rows[i]),
 							afterData:  nil,
 						},
 					}); err != nil {
