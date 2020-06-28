@@ -1,5 +1,8 @@
 # golibs
 
+[![Build Status](https://travis-ci.org/huangjunwen/golibs.svg?branch=master)](https://travis-ci.org/huangjunwen/golibs)
+[![codecov](https://codecov.io/gh/huangjunwen/golibs/branch/master/graph/badge.svg)](https://codecov.io/gh/huangjunwen/golibs)
+
 My go utilities library
 
 ## doc

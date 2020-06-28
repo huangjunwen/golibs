@@ -20,7 +20,7 @@
 //   - https://github.com/siddontang/go-mysql/pull/468
 //   - https://github.com/siddontang/go-mysql/pull/482
 //
-// Compatiable between fulldump/incrdump (see tests/compatiable_test.go):
+// Compatiable between fulldump/incrdump (see tst/compatiable_test.go):
 //
 //   - DECIMAL/NUMERIC fields are returned as string, but may have different trailing zeros.
 //   - BINARY fields are returned as string, but may have different trailing '\x00'.
