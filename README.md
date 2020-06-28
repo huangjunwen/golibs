@@ -8,5 +8,6 @@ https://pkg.go.dev/github.com/huangjunwen/golibs
 
 ## package list
 
-- sqlh: sql helpers
-- taskrunner: worker pool to control resource usage and implements graceful shutdown
+- sqlh: SQL helpers
+- taskrunner: Worker pool to control resource usage and implements graceful shutdown
+- mycanal: CDC (Change Data Capture) library for MySQL8+. No need to maintain table schemas manually any more.
