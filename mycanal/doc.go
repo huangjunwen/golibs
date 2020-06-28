@@ -26,7 +26,6 @@
 //   - BINARY fields are returned as string, but may have different trailing '\x00'.
 //   - JSON fields are returned as string, but elements inside may have different position.
 //
-//   - BIT fields seems have some bugs in incrdump.
 //   - TIME with fraction seems have some bugs in incrdump too.
 //   - GEOMETRY fields are not tested
 package mycanal

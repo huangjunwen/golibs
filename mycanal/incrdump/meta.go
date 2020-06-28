@@ -1,6 +1,7 @@
 package incrdump
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
@@ -145,16 +146,16 @@ func (meta *tableMeta) NormalizeRowData(data []interface{}) []interface{} {
 			continue
 		}
 
-		if meta.IsEnumColumn(i) {
+		switch meta.RealType(i) {
+		case MYSQL_TYPE_ENUM:
 			v, ok := val.(int64)
 			if !ok {
 				panic(fmt.Errorf("Expect int64 for enum (MYSQL_TYPE_ENUM) field but got %T %#v", val, val))
 			}
 			data[i] = meta.EnumStrValueMap()[i][int(v)-1]
 			continue
-		}
 
-		if meta.IsSetColumn(i) {
+		case MYSQL_TYPE_SET:
 			v, ok := val.(int64)
 			if !ok {
 				panic(fmt.Errorf("Expect int64 for set (MYSQL_TYPE_SET) field but got %T %#v", val, val))
@@ -168,9 +169,8 @@ func (meta *tableMeta) NormalizeRowData(data []interface{}) []interface{} {
 			}
 			data[i] = strings.Join(vals, ",")
 			continue
-		}
 
-		if meta.RealType(i) == MYSQL_TYPE_YEAR {
+		case MYSQL_TYPE_YEAR:
 			v, ok := val.(int)
 			if !ok {
 				panic(fmt.Errorf("Expect int for year (MYSQL_TYPE_YEAR) field but got %T %#v", val, val))
@@ -178,9 +178,8 @@ func (meta *tableMeta) NormalizeRowData(data []interface{}) []interface{} {
 			// NOTE: Convert to uint16 to keep the same as fulldump.
 			data[i] = uint16(v)
 			continue
-		}
 
-		if meta.RealType(i) == MYSQL_TYPE_NEWDATE {
+		case MYSQL_TYPE_NEWDATE:
 			v, ok := val.(string)
 			if !ok {
 				panic(fmt.Errorf("Expect string for date (MYSQL_TYPE_NEWDATE) field but got %T %#v", val, val))
@@ -192,6 +191,21 @@ func (meta *tableMeta) NormalizeRowData(data []interface{}) []interface{} {
 			}
 			data[i] = t
 			continue
+
+		case MYSQL_TYPE_BIT:
+			v, ok := val.(int64)
+			if !ok {
+				panic(fmt.Errorf("Expect int64 for bit (MYSQL_TYPE_BIT) field but got %T %#v", val, val))
+			}
+			// NOTE: Convert to string to keep the same as fulldump.
+			r := &strings.Builder{}
+			err := binary.Write(r, binary.BigEndian, v)
+			if err != nil {
+				panic(err)
+			}
+			data[i] = r.String()
+			continue
+
 		}
 
 		switch v := val.(type) {

@@ -81,7 +81,7 @@ func TestCompatible(t *testing.T) {
 		id int unsigned primary key auto_increment,
 
 		nb_bit bit(64),
-		mb_bit bit(64) not null default '1011',
+		mb_bit bit(64) not null default b'1111011101101',
 
 		ins_tinyint tinyint,
 		ins_smallint smallint,
