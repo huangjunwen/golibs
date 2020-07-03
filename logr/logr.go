@@ -9,3 +9,14 @@ type Logger interface {
 	// Error logs an error, with the given message and key/value pairs as context.
 	Error(err error, msg string, keysAndValues ...interface{})
 }
+
+type nopLogger struct{}
+
+func (l nopLogger) Info(msg string, keysAndValues ...interface{}) {}
+
+func (l nopLogger) Error(err error, msg string, keysAndValues ...interface{}) {}
+
+var (
+	// Nop does nothing.
+	Nop Logger = nopLogger{}
+)

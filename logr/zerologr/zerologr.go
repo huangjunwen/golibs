@@ -12,11 +12,6 @@ type Logger zerolog.Logger
 
 var (
 	_ logr.Logger = (*Logger)(nil)
-	// Nop logger.
-	Nop = func() *Logger {
-		l := zerolog.Nop()
-		return (*Logger)(&l)
-	}()
 )
 
 func (logger *Logger) Info(msg string, keysAndValues ...interface{}) {
