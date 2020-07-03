@@ -1,4 +1,4 @@
-package log
+package logr
 
 // Logger is a sub-interface of github.com/go-logr/logr::Logger,
 // which i think it's enough in most cases.
