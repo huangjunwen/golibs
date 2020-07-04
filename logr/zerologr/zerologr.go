@@ -31,3 +31,13 @@ func (logger *Logger) Error(err error, msg string, keysAndValues ...interface{})
 	}
 	ev.Msg(msg)
 }
+
+func (logger *Logger) WithValues(keysAndValues ...interface{}) logr.Logger {
+	l := (*zerolog.Logger)(logger)
+	ctx := l.With()
+	for i := 0; i < len(keysAndValues); i += 2 {
+		ctx = ctx.Interface(keysAndValues[i].(string), keysAndValues[i+1])
+	}
+	l2 := ctx.Logger()
+	return (*Logger)(&l2)
+}

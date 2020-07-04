@@ -8,6 +8,9 @@ type Logger interface {
 
 	// Error logs an error, with the given message and key/value pairs as context.
 	Error(err error, msg string, keysAndValues ...interface{})
+
+	// WithValues adds some key-value pairs of context to a logger.
+	WithValues(keysAndValues ...interface{}) Logger
 }
 
 type nopLogger struct{}
@@ -15,6 +18,8 @@ type nopLogger struct{}
 func (l nopLogger) Info(msg string, keysAndValues ...interface{}) {}
 
 func (l nopLogger) Error(err error, msg string, keysAndValues ...interface{}) {}
+
+func (l nopLogger) WithValues(keysAndValues ...interface{}) Logger { return nopLogger{} }
 
 var (
 	// Nop does nothing.
