@@ -16,10 +16,10 @@ const (
 	DefaultMaxWorkers = 4096
 
 	// Default queue size.
-	DefaultQueueSize = 16 * 1024
+	DefaultQueueSize = 4 * 4096
 
 	// Default idle time for non-persistent worker before quit.
-	DefaultIdleTime = 30 * time.Second
+	DefaultIdleTime = 10 * time.Second
 )
 
 var (
@@ -46,6 +46,15 @@ type LimitedRunner struct {
 
 	mu     sync.RWMutex
 	closed bool
+}
+
+// Must creates a LimitedRunner or panic.
+func Must(opts ...Option) *LimitedRunner {
+	ret, err := New(opts...)
+	if err != nil {
+		panic(err)
+	}
+	return ret
 }
 
 // New creates a new LimitedRunner.

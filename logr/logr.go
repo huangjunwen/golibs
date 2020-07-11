@@ -1,3 +1,4 @@
+// Package logr defines Logger interface.
 package logr
 
 // Logger is a sub-interface of github.com/go-logr/logr::Logger,
