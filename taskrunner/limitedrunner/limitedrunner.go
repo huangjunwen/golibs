@@ -8,20 +8,6 @@ import (
 	. "github.com/huangjunwen/golibs/taskrunner"
 )
 
-const (
-	// Default minimum go routines to handle tasks.
-	DefaultMinWorkers = 2
-
-	// Default maximum go routines to handle tasks.
-	DefaultMaxWorkers = 4096
-
-	// Default queue size.
-	DefaultQueueSize = 4 * 4096
-
-	// Default idle time for non-persistent worker before quit.
-	DefaultIdleTime = 10 * time.Second
-)
-
 var (
 	nop            = func() {}
 	_   TaskRunner = (*LimitedRunner)(nil)

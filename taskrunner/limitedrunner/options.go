@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+const (
+	// Default minimum go routines to handle tasks.
+	DefaultMinWorkers = 2
+
+	// Default maximum go routines to handle tasks.
+	DefaultMaxWorkers = 4096
+
+	// Default queue size.
+	DefaultQueueSize = 4096
+
+	// Default idle time for non-persistent worker before quit.
+	DefaultIdleTime = 10 * time.Second
+)
+
 // Option is the option in creating LimitedRunner.
 type Option func(*LimitedRunner) error
 
