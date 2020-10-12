@@ -72,12 +72,17 @@ func (txCtx *TxContext) OnFinalised(fn func()) {
 //
 // Inside you can use OnCommitted/OnFinalised to add functions to be called after tx end.
 func WithTx(ctx context.Context, db *sql.DB, fn func(context.Context, *sql.Tx) error) (err error) {
+	return WithTxOpts(ctx, db, nil, fn)
+}
+
+// WithTxOpts is similar to WithTx except an extra TxOptions.
+func WithTxOpts(ctx context.Context, db *sql.DB, opts *sql.TxOptions, fn func(context.Context, *sql.Tx) error) (err error) {
 	txCtx := &TxContext{
 		db:     db,
 		locals: make(map[interface{}]interface{}),
 	}
 	ctx = context.WithValue(ctx, txContextKey{}, txCtx)
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
 		return
 	}
