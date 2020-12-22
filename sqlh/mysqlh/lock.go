@@ -22,7 +22,7 @@ var (
 	LockOptDefaultPingInterval = 1 * time.Second
 
 	// LockOptDefaultCooldownInterval is the default value of LockOptions.CooldownInterval.
-	LockOptDefaultCooldownInterval = 3 * time.Second
+	LockOptDefaultCooldownInterval = 5 * time.Second
 
 	// LockOptDefaultLogger is the default value of LockOptions.Logger.
 	LockOptDefaultLogger = logr.Nop
@@ -168,8 +168,8 @@ func WithLockOpts(ctx context.Context, db *sql.DB, lockStr string, opts *LockOpt
 	case <-time.After(cooldownInterval):
 	}
 
-	logger.Info("WithLock begin work")
-	defer logger.Info("WithLock end work")
+	logger.Info("WithLock work begin")
+	defer logger.Info("WithLock work end")
 	do(subCtx)
 	return nil
 }

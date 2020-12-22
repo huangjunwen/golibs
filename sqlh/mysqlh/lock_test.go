@@ -96,12 +96,24 @@ func TestWithLock(t *testing.T) {
 
 	}
 
+	log.Printf("\n")
+	log.Printf(">>>> Test simple.\n")
+	{
+		called := false
+		err := WithLock(bgCtx, db, "test.simple", func(ctx context.Context) {
+			called = true
+			return
+		})
+		assert.NoError(err)
+		assert.True(called)
+	}
+
 	// Test context done.
 	log.Printf("\n")
 	log.Printf(">>>> Test context done.\n")
 	{
 		called := false
-		ctx, _ := context.WithTimeout(bgCtx, 5*time.Second)
+		ctx, _ := context.WithTimeout(bgCtx, LockOptDefaultCooldownInterval+2*time.Second)
 		err := WithLock(ctx, db, "test.context.done", func(ctx context.Context) {
 			called = true
 			<-ctx.Done()
