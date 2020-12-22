@@ -164,6 +164,7 @@ func WithLockOpts(ctx context.Context, db *sql.DB, lockStr string, opts *LockOpt
 	// Wait a while before actual work.
 	select {
 	case <-subCtx.Done():
+		logger.Error(err, "WithLock context done during cooldown")
 		return ctx.Err()
 	case <-time.After(cooldownInterval):
 	}
