@@ -1,15 +1,15 @@
-# golibs
+# Golibs
 
 [![Build Status](https://travis-ci.org/huangjunwen/golibs.svg?branch=master)](https://travis-ci.org/huangjunwen/golibs)
 [![codecov](https://codecov.io/gh/huangjunwen/golibs/branch/master/graph/badge.svg)](https://codecov.io/gh/huangjunwen/golibs)
 
 My go utilities library
 
-## doc
+## Doc
 
 https://pkg.go.dev/github.com/huangjunwen/golibs
 
-## package list
+## Package list
 
 - sqlh: SQL helpers.
 - taskrunner: Worker pool to control resource usage and implements graceful shutdown.
