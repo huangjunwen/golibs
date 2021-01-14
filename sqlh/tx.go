@@ -11,87 +11,71 @@ var (
 	Rollback = errors.New("Just rollback")
 )
 
-// TxContext contains transaction context.
-type TxContext struct {
-	db *sql.DB
-	// tx associated local variables
-	locals map[interface{}]interface{}
-	// stacks of functions
-	onCommitted []func()
-	onFinalised []func()
+var (
+	emptyTxOptions = &TxOptions{}
+)
+
+// TxOptions contains extra options for a db transaction.
+type TxOptions struct {
+	sql.TxOptions
+
+	// BeforeTx will be called (if not nil) before transaction starts.
+	// `conn` is the db session used to start transaction.
+	// If the callback returns an error, WithTxOpts returns that error and the transaction
+	// will not start.
+	BeforeTx func(ctx context.Context, conn *sql.Conn) error
+
+	// AfterTx will be called (if not nil) after transaction finished with the commit status.
+	// `conn` is the db session used to start transaction.
+	AfterTx func(ctx context.Context, conn *sql.Conn, committed bool)
 }
 
-type txContextKey struct{}
-
-// CurTxContext returns current TxContext in transaction. It returns nil if not exists.
-func CurTxContext(ctx context.Context) *TxContext {
-	v := ctx.Value(txContextKey{})
-	ret, _ := v.(*TxContext)
-	return ret
-}
-
-// MustCurTxContext is the `must` version of CurTxContext.
-func MustCurTxContext(ctx context.Context) *TxContext {
-	ret := CurTxContext(ctx)
-	if ret == nil {
-		panic(errors.New("MustCurTxContext must be called within WithTx"))
-	}
-	return ret
-}
-
-// DB returns the original *sql.DB that starts the transaction.
-func (txCtx *TxContext) DB() *sql.DB {
-	return txCtx.db
-}
-
-// SetLocal sets tx local variable.
-func (txCtx *TxContext) SetLocal(key, val interface{}) {
-	txCtx.locals[key] = val
-}
-
-// Local gets tx local variable.
-func (txCtx *TxContext) Local(key interface{}) interface{} {
-	return txCtx.locals[key]
-}
-
-// OnCommitted adds a function which will be only called after the transaction has been successful committed.
-// The invocation order of OnCommitted functions just like defer functions.
-func (txCtx *TxContext) OnCommitted(fn func()) {
-	txCtx.onCommitted = append(txCtx.onCommitted, fn)
-}
-
-// OnFinalised adds a function which will be called after the transaction ended (either committed or rollback).
-// The invocation order of OnFinalised functions just like defer functions.
-func (txCtx *TxContext) OnFinalised(fn func()) {
-	txCtx.onFinalised = append(txCtx.onFinalised, fn)
-}
-
-// WithTx starts a transaction and run fn. If no error is returned, the transaction is committed.
+// WithTx starts a transaction and run fn. If no error is returned by fn, the transaction will be committed.
 // Otherwise it is rollbacked and the error is returned to the caller (except returning Rollback,
 // which will rollback the transaction but not returning error).
-//
-// Inside you can use OnCommitted/OnFinalised to add functions to be called after tx end.
 func WithTx(ctx context.Context, db *sql.DB, fn func(context.Context, *sql.Tx) error) (err error) {
 	return WithTxOpts(ctx, db, nil, fn)
 }
 
-// WithTxOpts is similar to WithTx except an extra TxOptions.
-func WithTxOpts(ctx context.Context, db *sql.DB, opts *sql.TxOptions, fn func(context.Context, *sql.Tx) error) (err error) {
-	txCtx := &TxContext{
-		db:     db,
-		locals: make(map[interface{}]interface{}),
-	}
-	ctx = context.WithValue(ctx, txContextKey{}, txCtx)
-	tx, err := db.BeginTx(ctx, opts)
-	if err != nil {
-		return
+// WithTxOpts is similar to WithTx with extra options.
+func WithTxOpts(ctx context.Context, db *sql.DB, opts *TxOptions, fn func(context.Context, *sql.Tx) error) (err error) {
+
+	if opts == nil {
+		opts = emptyTxOptions
 	}
 
+	beginTx := db.BeginTx
+	txCommitted := false
+
+	if opts.BeforeTx != nil || opts.AfterTx != nil {
+		// If any hook is not nil, then use a *sql.Conn explicitly.
+		var conn *sql.Conn
+		conn, err = db.Conn(ctx)
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		if opts.BeforeTx != nil {
+			if err = opts.BeforeTx(ctx, conn); err != nil {
+				return err
+			}
+		}
+		if opts.AfterTx != nil {
+			defer func() {
+				opts.AfterTx(ctx, conn, txCommitted)
+			}()
+		}
+
+		beginTx = conn.BeginTx
+	}
+
+	tx, err := beginTx(ctx, &opts.TxOptions)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		tx.Rollback()
-		for i := len(txCtx.onFinalised) - 1; i >= 0; i-- {
-			txCtx.onFinalised[i]()
-		}
 		if err == Rollback {
 			// Rollback is not treated as an error.
 			err = nil
@@ -107,10 +91,6 @@ func WithTxOpts(ctx context.Context, db *sql.DB, opts *sql.TxOptions, fn func(co
 	if err != nil {
 		return
 	}
-
-	for i := len(txCtx.onCommitted) - 1; i >= 0; i-- {
-		txCtx.onCommitted[i]()
-	}
-
+	txCommitted = true
 	return
 }
