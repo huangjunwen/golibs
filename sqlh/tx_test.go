@@ -88,11 +88,12 @@ func TestWithTxOpts(t *testing.T) {
 
 	bgctx := context.Background()
 
-	for _, testCase := range []struct {
-		Fn         func(context.Context, *sql.Tx) error
-		Opts       *TxOptions
-		ExpectErr  error
-		ExtraCheck func()
+	for i, testCase := range []struct {
+		Fn          func(context.Context, *sql.Tx) error
+		Opts        *TxOptions
+		ExpectErr   error
+		ExpectPanic bool
+		ExtraCheck  func()
 	}{
 		// Commit without options.
 		{
@@ -200,6 +201,28 @@ func TestWithTxOpts(t *testing.T) {
 			},
 			ExpectErr: testTxErr,
 		},
+		// Panic
+		{
+			Fn: func(ctx context.Context, tx *sql.Tx) error {
+				_, err := tx.Exec("INSERT INTO xxxx.t (name) values ('aaaa')")
+				assert.NoError(err)
+				panic(testTxErr)
+				return err
+			},
+			ExpectPanic: true,
+			Opts: &TxOptions{
+				AfterTx: func(ctx context.Context, conn *sql.Conn, committed bool) {
+					assert.False(committed)
+					log.Printf("panic AfterTx called")
+				},
+			},
+			ExtraCheck: func() {
+				var count int
+				err := db.QueryRow("SELECT COUNT(*) FROM xxxx.t WHERE name='aaaa'").Scan(&count)
+				assert.NoError(err)
+				assert.Equal(0, count)
+			},
+		},
 	} {
 		// Always clean test table first.
 		_, err := db.Exec("DELETE FROM xxxx.t")
@@ -207,8 +230,14 @@ func TestWithTxOpts(t *testing.T) {
 			log.Panic(err)
 		}
 
-		err = WithTxOpts(bgctx, db, testCase.Opts, testCase.Fn)
-		assert.Equal(testCase.ExpectErr, err)
+		if testCase.ExpectPanic {
+			assert.Panics(func() {
+				WithTxOpts(bgctx, db, testCase.Opts, testCase.Fn)
+			}, "test case %d", i)
+		} else {
+			err = WithTxOpts(bgctx, db, testCase.Opts, testCase.Fn)
+			assert.Equal(testCase.ExpectErr, err, "test case %d", i)
+		}
 		if testCase.ExtraCheck != nil {
 			testCase.ExtraCheck()
 		}
