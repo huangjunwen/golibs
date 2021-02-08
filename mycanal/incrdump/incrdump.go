@@ -14,12 +14,12 @@ import (
 // IncrDump reads events from mysql binlog, see mycanal's doc for prerequisites
 func IncrDump(
 	ctx context.Context,
-	cfg *IncrDumpConfig,
+	cfg *Config,
 	gtidSet string,
 	handler Handler,
 ) error {
 
-	conf := cfg.ToDriverCfg()
+	conf := cfg.ToBinlogSyncerCfg()
 	gset, err := mysql.ParseMysqlGTIDSet(gtidSet)
 	if err != nil {
 		panic(err)

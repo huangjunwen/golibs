@@ -53,17 +53,11 @@ func TestCompatible(t *testing.T) {
 		log.Printf("MySQL server started.\n")
 	}
 
-	cfg := Config{
+	cfg := &Config{
 		Host:     "localhost",
 		Port:     resMySQL.Options.HostPort,
 		User:     "root",
 		Password: resMySQL.Options.RootPassword,
-	}
-	fullDumpCfg := &FullDumpConfig{
-		Config: cfg,
-	}
-	incrDumpCfg := &IncrDumpConfig{
-		Config:   cfg,
 		ServerId: 1001,
 	}
 
@@ -184,7 +178,7 @@ func TestCompatible(t *testing.T) {
 
 	var gset string
 	var fullDumpVals map[string]interface{}
-	gset, err = fulldump.FullDump(context.Background(), fullDumpCfg, func(ctx context.Context, q sqlh.Queryer) error {
+	gset, err = fulldump.FullDump(context.Background(), cfg, func(ctx context.Context, q sqlh.Queryer) error {
 		iter, err := fulldump.FullTableQuery(ctx, q, "tst", "_types")
 		if err != nil {
 			return err
@@ -209,7 +203,7 @@ func TestCompatible(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	err = incrdump.IncrDump(
 		ctx,
-		incrDumpCfg,
+		cfg,
 		gset,
 		func(ctx context.Context, e interface{}) error {
 			switch ev := e.(type) {

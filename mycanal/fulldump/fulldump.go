@@ -18,7 +18,7 @@ import (
 //   - https://issues.redhat.com/browse/DBZ-210
 func FullDump(
 	ctx context.Context,
-	cfg *FullDumpConfig,
+	cfg *Config,
 	handler Handler,
 ) (gtidSet string, err error) {
 

@@ -8,6 +8,7 @@ import (
 	"github.com/siddontang/go-mysql/replication"
 )
 
+// Config is used for fulldump and incrdump.
 type Config struct {
 	// Host of MySQL server.
 	Host string `json:"host"`
@@ -23,20 +24,13 @@ type Config struct {
 
 	// Charset for connecting.
 	Charset string `json:"charset"`
-}
 
-type FullDumpConfig struct {
-	Config
-}
-
-type IncrDumpConfig struct {
-	Config
-
-	// ServerId is the server id for the slave.
+	// ServerId is used by incrdump only (as a replication node).
 	ServerId uint32 `json:"serverId"`
 }
 
-func (cfg *FullDumpConfig) ToDriverCfg() *mysql.Config {
+// ToDriverCfg converts cfg to mysql driver config.
+func (cfg *Config) ToDriverCfg() *mysql.Config {
 	ret := mysql.NewConfig()
 	ret.Net = "tcp"
 	ret.Addr = fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
@@ -51,11 +45,11 @@ func (cfg *FullDumpConfig) ToDriverCfg() *mysql.Config {
 	return ret
 }
 
-func (cfg *FullDumpConfig) Client() (*sql.DB, error) {
-	return sql.Open("mysql", cfg.ToDriverCfg().FormatDSN())
-}
-
-func (cfg *IncrDumpConfig) ToDriverCfg() replication.BinlogSyncerConfig {
+// ToBinlogSyncerCfg converts cfg to binlog syncer config. Needs ServerId.
+func (cfg *Config) ToBinlogSyncerCfg() replication.BinlogSyncerConfig {
+	if cfg.ServerId == 0 {
+		panic(fmt.Errorf("ToBinlogSyncerCfg: no ServerId"))
+	}
 	return replication.BinlogSyncerConfig{
 		ServerID:   cfg.ServerId,
 		Host:       cfg.Host,
@@ -66,6 +60,11 @@ func (cfg *IncrDumpConfig) ToDriverCfg() replication.BinlogSyncerConfig {
 		ParseTime:  true,
 		UseDecimal: true,
 	}
+}
+
+// Client opens mysql db.
+func (cfg *Config) Client() (*sql.DB, error) {
+	return sql.Open("mysql", cfg.ToDriverCfg().FormatDSN())
 }
 
 func (cfg *Config) getCharset() string {
