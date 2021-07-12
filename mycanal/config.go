@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/go-mysql-org/go-mysql/replication"
 	"github.com/go-sql-driver/mysql"
-	"github.com/siddontang/go-mysql/replication"
 )
 
 // Config is used for fulldump and incrdump.

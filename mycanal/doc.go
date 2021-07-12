@@ -17,8 +17,8 @@
 // ref:
 //   - https://mysqlhighavailability.com/more-metadata-is-written-into-binary-log/
 //   - https://mysqlhighavailability.com/taking-advantage-of-new-transaction-length-metadata/
-//   - https://github.com/siddontang/go-mysql/pull/468
-//   - https://github.com/siddontang/go-mysql/pull/482
+//   - https://github.com/go-mysql-org/go-mysql/pull/468
+//   - https://github.com/go-mysql-org/go-mysql/pull/482
 //
 // Compatiable between fulldump/incrdump (see tst/compatiable_test.go):
 //

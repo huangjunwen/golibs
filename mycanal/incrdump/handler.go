@@ -3,7 +3,7 @@ package incrdump
 import (
 	"context"
 
-	"github.com/siddontang/go-mysql/replication"
+	"github.com/go-mysql-org/go-mysql/replication"
 )
 
 // Handler is used to handle events in binlog, can be one of the followings:

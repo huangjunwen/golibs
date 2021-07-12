@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-mysql-org/go-mysql/mysql"
+	"github.com/go-mysql-org/go-mysql/replication"
 	"github.com/pkg/errors"
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go-mysql/replication"
 
 	. "github.com/huangjunwen/golibs/mycanal"
 )

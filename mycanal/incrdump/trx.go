@@ -1,8 +1,8 @@
 package incrdump
 
 import (
-	"github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go-mysql/replication"
+	"github.com/go-mysql-org/go-mysql/mysql"
+	"github.com/go-mysql-org/go-mysql/replication"
 )
 
 // TrxContext is the context of binlog trx.

@@ -3,8 +3,8 @@ package incrdump
 import (
 	"fmt"
 
+	"github.com/go-mysql-org/go-mysql/replication"
 	uuid "github.com/satori/go.uuid"
-	"github.com/siddontang/go-mysql/replication"
 )
 
 func safeUint64Minus(left, right uint64) uint64 {

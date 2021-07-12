@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/go-mysql-org/go-mysql/mysql"
+	"github.com/go-mysql-org/go-mysql/replication"
 	"github.com/shopspring/decimal"
-	. "github.com/siddontang/go-mysql/mysql"
-	"github.com/siddontang/go-mysql/replication"
 )
 
 var (
@@ -78,7 +78,7 @@ func (meta *tableMeta) SetStrValueMap() map[int][]string {
 }
 
 // I didn't export TableMapEvent.realType in go-mysql but need to use it here ....
-// So copy https://github.com/siddontang/go-mysql/replication/row_event.go
+// So copy https://github.com/go-mysql-org/go-mysql/replication/row_event.go
 func (meta *tableMeta) RealType(i int) byte {
 	typ := meta.TableMapEvent.ColumnType[i]
 
